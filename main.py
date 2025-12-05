@@ -16,7 +16,7 @@ def main():
     if len(sys.argv) > 1:
         board_file = sys.argv[1]
     else:
-        board_file = "tests/example_boards/small_5x5.txt"
+        board_file = "tests/example_boards/medium_9x9.txt"
     
     print("=" * 60)
     print("Minesweeper Solver - Person 1 Implementation")
@@ -48,11 +48,27 @@ def main():
         iteration += 1
         print(f"\n--- Iteration {iteration} ---")
         
+        # Check if game is over (mine was hit)
+        if board.game_over:
+            print(f"\n✗ Hit a mine at {board.hit_mine_at}")
+            print("Game Over — LOSS")
+            break
+        
         # Get solver decision
         action, cells = step(board)
         
-        if action == "none" or not cells:
-            print("No moves available. Solver stuck.")
+        # Check again after step (in case step detected game_over)
+        if board.game_over:
+            print(f"\n✗ Hit a mine at {board.hit_mine_at}")
+            print("Game Over — LOSS")
+            break
+        
+        if action == "none" or not cells or action == "game_over":
+            if action == "game_over":
+                print(f"\n✗ Hit a mine at {board.hit_mine_at}")
+                print("Game Over — LOSS")
+            else:
+                print("No moves available. Solver stuck.")
             break
         
         # Display decision
@@ -62,6 +78,12 @@ def main():
         # Apply action
         success = solve_step(board, action, cells)
         
+        # Check if game over after applying action
+        if board.game_over:
+            print(f"\n✗ Hit a mine at {board.hit_mine_at}")
+            print("Game Over — LOSS")
+            break
+        
         if not success:
             print("Warning: Action failed to apply.")
             break
@@ -69,18 +91,34 @@ def main():
         # Show updated board
         board.print_solver_view()
         
-        # Check if finished
+        # Check if finished (win condition)
         if board.is_finished():
             print("\n✓ Game finished! All safe cells revealed.")
+            print("Game Over — WIN")
             break
     
-    if iteration >= max_iterations:
+    # Final game state check
+    if not board.game_over and iteration >= max_iterations:
         print(f"\nReached maximum iterations ({max_iterations}).")
+        if board.is_finished():
+            print("Game Over — WIN")
+        else:
+            print("Game Over — STUCK")
     
     # Final statistics
     print("\n" + "=" * 60)
     print("Final Statistics:")
     print("=" * 60)
+    
+    # Determine final game state
+    if board.game_over:
+        print("Game Result: LOSS (mine hit)")
+        print(f"Mine hit at: {board.hit_mine_at}")
+    elif board.is_finished():
+        print("Game Result: WIN (all safe cells revealed)")
+    else:
+        print("Game Result: STUCK (no moves available)")
+    
     unknown = board.unknown_cells()
     flagged = sum(1 for i in range(board.rows) for j in range(board.cols) 
                   if board.is_flagged(i, j))

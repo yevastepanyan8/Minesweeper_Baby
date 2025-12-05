@@ -43,6 +43,8 @@ class Board:
         self._bombs = bombs if bombs is not None else set()
         self._revealed_count = 0
         self._flagged_count = 0
+        self.game_over = False
+        self.hit_mine_at = None
         
     def neighbors(self, i: int, j: int) -> List[Tuple[int, int]]:
         """
@@ -84,10 +86,12 @@ class Board:
         
         # Check if it's a bomb (for simulation)
         if (i, j) in self._bombs:
-            # Mark as a special value to indicate it's a bomb (we'll use a high number)
-            # This shouldn't happen in normal solving, but we handle it gracefully
+            # Mark as 9 to indicate it's a mine
             self._board[i][j] = 9  # Special value for bomb (not a valid mine count)
             self._revealed_count += 1
+            # Set game over state - game ends immediately when mine is hit
+            self.game_over = True
+            self.hit_mine_at = (i, j)
             return True
         
         # Count adjacent mines
@@ -171,6 +175,8 @@ class Board:
     def is_revealed(self, i: int, j: int) -> bool:
         """Check if a tile is revealed."""
         val = self.get_tile(i, j)
+        # Revealed tiles are: numbers 0-8, or 9 (mine)
+        # FLAGGED is -2, UNKNOWN is -1
         return val >= 0 and val != TileState.FLAGGED
     
     def is_flagged(self, i: int, j: int) -> bool:
@@ -248,6 +254,8 @@ class Board:
                     row.append("?")
                 elif val == TileState.FLAGGED:
                     row.append("F")
+                elif val == 9:
+                    row.append("*")  # Mine
                 elif val >= 0:
                     row.append(str(val))
                 else:
@@ -278,6 +286,8 @@ class Board:
                     print(" ?", end="")
                 elif val == TileState.FLAGGED:
                     print(" F", end="")
+                elif val == 9:
+                    print(" *", end="")  # Mine
                 elif val >= 0:
                     print(f" {val}", end="")
                 else:

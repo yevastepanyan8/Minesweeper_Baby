@@ -29,6 +29,10 @@ def step(board: Board) -> Tuple[str, List[Tuple[int, int]]]:
         - action_type: "reveal_safe", "flag_mines", or "guess"
         - cells: List of (row, col) tuples to act upon
     """
+    # Check if game is over - don't continue if mine was hit
+    if board.game_over:
+        return ("game_over", [])
+    
     # Step 1: Try CSP inference
     safe_cells, mine_cells = csp.infer(board)
     
@@ -68,28 +72,44 @@ def solve_step(board: Board, action: str, cells: List[Tuple[int, int]]) -> bool:
     Returns:
         True if any action was successfully applied, False otherwise
     """
+    # Check if game is over - don't continue if mine was hit
+    if board.game_over:
+        return False
+    
     success = False
     
     if action == "reveal_safe":
         for i, j in cells:
+            if board.game_over:
+                break  # Stop immediately if mine was hit
             if board.reveal(i, j):
                 success = True
+                # Check if game over after reveal (mine was hit)
+                if board.game_over:
+                    break  # Stop immediately
                 # If revealed a zero, use BFS to reveal connected zeros
                 if board.get_tile(i, j) == 0:
-                    bfs.bfs_reveal(board, (i, j))
+                    bfs.bfs_reveal(board, i, j)
     
     elif action == "flag_mines":
         for i, j in cells:
+            if board.game_over:
+                break
             if board.flag(i, j):
                 success = True
     
     elif action == "guess":
         for i, j in cells:
+            if board.game_over:
+                break  # Stop immediately if mine was hit
             if board.reveal(i, j):
                 success = True
+                # Check if game over after reveal (mine was hit)
+                if board.game_over:
+                    break  # Stop immediately
                 # If revealed a zero, use BFS to reveal connected zeros
                 if board.get_tile(i, j) == 0:
-                    bfs.bfs_reveal(board, (i, j))
+                    bfs.bfs_reveal(board, i, j)
     
     return success
 

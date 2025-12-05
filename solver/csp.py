@@ -68,7 +68,7 @@ class CSPEngine:
         for i, j in board.revealed_cells():
             # Get the number on this tile
             tile_value = board.get_tile(i, j)
-            if tile_value < 0:  # Not a valid revealed tile
+            if tile_value < 0 or tile_value == 9:  # Not a valid revealed tile (UNKNOWN/FLAGGED) or mine
                 continue
             
             # Get all neighbors

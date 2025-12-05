@@ -12,12 +12,13 @@ Minesweeper_Baby/
 │   ├── csp.py               # CSP inference engine (Person 1)
 │   ├── strategy.py          # Main solver loop integration (Person 1)
 │   ├── probability.py       # Probability-based selection (Person 2) ✨
-│   ├── bfs.py               # BFS flood-fill for zero regions (Person 3 - placeholder)
+│   ├── bfs.py               # BFS flood-fill for zero regions (Person 3) ✨
 │   └── utils.py             # Utility functions
 ├── tests/
 │   ├── test_board_simple.py # Board class tests
 │   ├── test_csp_simple.py   # CSP engine tests
 │   ├── test_probability_simple.py  # Probability module tests ✨
+│   ├── test_bfs_simple.py          # BFS module tests ✨
 │   └── example_boards/
 │       ├── small_5x5.txt    # Small test board
 │       └── medium_9x9.txt   # Medium test board
@@ -72,6 +73,45 @@ Minesweeper_Baby/
 - Tie-breaking: selects cell closest to board center
 - No heavy SAT/backtracking - efficient approximations only
 
+## Person 3 Deliverables (Completed) ✨
+
+### ✅ BFS Flood-Fill Engine (`bfs.py`)
+
+**Core Algorithm:**
+1. **BFS Implementation**: Iterative breadth-first search using a queue
+2. **Zero Expansion**: Reveals all connected zero tiles automatically
+3. **Frontier Revelation**: Reveals numbered neighbors (frontier) but stops BFS there
+4. **Edge Case Handling**: Respects flags, boundaries, and already-revealed tiles
+
+**Why BFS over DFS:**
+- **Bounded Memory**: Queue size bounded by frontier width (not depth)
+- **Efficiency**: Better for wide zero regions common in Minesweeper
+- **No Recursion Limits**: Iterative implementation avoids stack overflow
+- **Predictable**: Level-by-level processing is easier to reason about
+
+**How It Works:**
+1. When a zero tile is revealed, `bfs_reveal()` is called
+2. Starting from the zero tile, BFS processes all neighbors
+3. If neighbor is zero → add to queue for further expansion
+4. If neighbor is non-zero → reveal it (frontier) but don't continue BFS
+5. Process continues until queue is empty
+
+**Key Functions:**
+- `bfs_reveal(board, start_i, start_j)` - Main BFS function, returns list of revealed cells
+- `bfs_reveal_tuple(board, start)` - Convenience wrapper for tuple input
+
+**Integration:**
+- Automatically called from `strategy.py` after any zero tile reveal
+- Works seamlessly with CSP (reveals more tiles for CSP to analyze)
+- Works seamlessly with probability (more revealed tiles = better constraints)
+- Does not interfere with solver loop iteration
+
+**Design Choices:**
+- Iterative BFS (no recursion) for reliability
+- Returns list of revealed cells for state tracking
+- Only uses public Board API (no internal access)
+- Handles all edge cases: flags, boundaries, already-revealed tiles
+
 ## Usage
 
 ### Running the Solver
@@ -96,6 +136,9 @@ python tests/test_csp_simple.py
 
 # Test probability module
 python tests/test_probability_simple.py
+
+# Test BFS module
+python tests/test_bfs_simple.py
 ```
 
 ### Debugging Probabilities
@@ -148,21 +191,52 @@ Example:
 
 4. **Selection**: Choose cell with minimum probability, breaking ties by distance to center
 
+### BFS Flood-Fill Algorithm
+
+1. **Initialization**: Start from a zero tile `(i, j)`
+2. **Queue Setup**: Add all unknown neighbors to BFS queue
+3. **Processing Loop**:
+   - Dequeue next tile
+   - If unknown, reveal it
+   - If revealed value is 0 → add its unknown neighbors to queue
+   - If revealed value > 0 → stop BFS at this tile (frontier)
+4. **Termination**: Stop when queue is empty
+
+**Edge Cases Handled:**
+- Flagged tiles: Never revealed, even if in zero region
+- Out-of-bounds: Handled by `board.neighbors()` method
+- Already-revealed: Skipped to avoid duplicate processing
+- Non-zero tiles: Revealed as frontier but BFS stops
+
 ### Design Principles
 
 - **Modular**: Each module has a clear responsibility
-- **Extensible**: Easy for Person 3 to add BFS module
+- **Extensible**: All three modules (CSP, Probability, BFS) work together seamlessly
 - **Simple**: Efficient approximations, no heavy algorithms
 - **Readable**: Well-documented code with clear function names
 - **No GUI**: Terminal/ASCII output only
 
-## Next Steps for Person 3
+## Complete Solver Architecture
 
-### BFS Module
-Implement `bfs.bfs_reveal(board, start)` to:
-- Perform breadth-first search from starting position
-- Reveal all connected zero tiles (flood-fill)
-- Stop at non-zero revealed tiles or boundaries
+The solver integrates three complementary strategies:
+
+1. **CSP (Person 1)**: Deterministic inference - finds guaranteed safe cells and mines
+2. **Probability (Person 2)**: Probabilistic reasoning - estimates mine probabilities when CSP fails
+3. **BFS (Person 3)**: Flood-fill expansion - automatically reveals connected zero regions
+
+**Solver Flow:**
+```
+1. CSP inference → finds safe cells/mines
+2. If no CSP results → Probability module → finds safest cell
+3. Reveal chosen cell
+4. If revealed cell is zero → BFS expands zero region
+5. Repeat until solved or stuck
+```
+
+This three-module approach ensures:
+- Maximum information extraction (CSP + BFS)
+- Intelligent guessing when needed (Probability)
+- Efficient exploration (BFS auto-reveal)
 
 ## Development Notes
 
